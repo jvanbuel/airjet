@@ -1,0 +1,19 @@
+# Long-lived Airflow Edge workers: poll the API server for jobs over HTTP (no broker).
+# job_poll_interval (seconds, integer) bounds how quickly an idle worker picks up work.
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: airflow-edge-worker, namespace: airjet}
+spec:
+  replicas: 1
+  selector: {matchLabels: {app: airflow-edge-worker}}
+  template:
+    metadata: {labels: {app: airflow-edge-worker}}
+    spec:
+      containers:
+        - name: edge-worker
+          image: airjet/airflow:dev
+          imagePullPolicy: IfNotPresent
+          args: ["edge", "worker", "--concurrency", "8", "--queues", "default"]
+          envFrom: [{configMapRef: {name: airflow-env}}]
+          env:
+            - {name: AIRFLOW__EDGE__JOB_POLL_INTERVAL, value: "5"}

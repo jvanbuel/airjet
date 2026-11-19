@@ -1,0 +1,56 @@
+{
+ "bench_wasm_edge_run": {
+  "runs": 5,
+  "failed_runs": 0,
+  "makespan_ms_p50": 9155.0,
+  "queue_to_start_ms_p50": 4875.0,
+  "task_runtime_ms_p50": 2805.0,
+  "task_total_ms_p50": 7640.0,
+  "task_total_ms_max": 8836.0
+ },
+ "bench_uv_op_edge_run": {
+  "runs": 5,
+  "failed_runs": 0,
+  "makespan_ms_p50": 9025.0,
+  "queue_to_start_ms_p50": 5042.0,
+  "task_runtime_ms_p50": 2971.0,
+  "task_total_ms_p50": 8119.0,
+  "task_total_ms_max": 9060.0
+ },
+ "bench_native_bash_edge_run": {
+  "runs": 5,
+  "failed_runs": 0,
+  "makespan_ms_p50": 3640.0,
+  "queue_to_start_ms_p50": 903.0,
+  "task_runtime_ms_p50": 2379.0,
+  "task_total_ms_p50": 3259.0,
+  "task_total_ms_max": 6459.0
+ },
+ "bench_wasm_edge_noop": {
+  "runs": 5,
+  "failed_runs": 0,
+  "makespan_ms_p50": 8095.0,
+  "queue_to_start_ms_p50": 5013.0,
+  "task_runtime_ms_p50": 2104.0,
+  "task_total_ms_p50": 7227.0,
+  "task_total_ms_max": 7960.0
+ },
+ "bench_uv_op_edge_noop": {
+  "runs": 5,
+  "failed_runs": 0,
+  "makespan_ms_p50": 4591.0,
+  "queue_to_start_ms_p50": 1167.0,
+  "task_runtime_ms_p50": 2352.0,
+  "task_total_ms_p50": 3582.0,
+  "task_total_ms_max": 8659.0
+ },
+ "bench_native_bash_edge_noop": {
+  "runs": 5,
+  "failed_runs": 0,
+  "makespan_ms_p50": 7421.0,
+  "queue_to_start_ms_p50": 4322.0,
+  "task_runtime_ms_p50": 2184.0,
+  "task_total_ms_p50": 6467.0,
+  "task_total_ms_max": 7964.0
+ }
+}

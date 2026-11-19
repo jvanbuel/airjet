@@ -1,0 +1,322 @@
+[
+ {
+  "dag_id": "bench_wasm_edge_run",
+  "run_id": "bench_20261119T071609_1",
+  "state": "success",
+  "makespan": 3694.134,
+  "tasks": [
+   {
+    "task_id": "t00",
+    "state": "success",
+    "queue_to_start": 531.435,
+    "task_runtime": 2110.382,
+    "task_total": 2683.259
+   },
+   {
+    "task_id": "t01",
+    "state": "success",
+    "queue_to_start": 362.156,
+    "task_runtime": 2023.456,
+    "task_total": 2427.054
+   },
+   {
+    "task_id": "t02",
+    "state": "success",
+    "queue_to_start": 468.777,
+    "task_runtime": 1939.675,
+    "task_total": 2449.8940000000002
+   },
+   {
+    "task_id": "t03",
+    "state": "success",
+    "queue_to_start": 195.23,
+    "task_runtime": 891.265,
+    "task_total": 1127.937
+   },
+   {
+    "task_id": "t04",
+    "state": "success",
+    "queue_to_start": 388.781,
+    "task_runtime": 2482.6130000000003,
+    "task_total": 2912.836
+   },
+   {
+    "task_id": "t05",
+    "state": "success",
+    "queue_to_start": 537.023,
+    "task_runtime": 1837.866,
+    "task_total": 2416.331
+   },
+   {
+    "task_id": "t06",
+    "state": "success",
+    "queue_to_start": 669.381,
+    "task_runtime": 2282.311,
+    "task_total": 2993.134
+   },
+   {
+    "task_id": "t07",
+    "state": "success",
+    "queue_to_start": 1000.6949999999999,
+    "task_runtime": 1784.8509999999999,
+    "task_total": 2826.9880000000003
+   }
+  ]
+ },
+ {
+  "dag_id": "bench_wasm_edge_run",
+  "run_id": "bench_20261119T071609_2",
+  "state": "success",
+  "makespan": 4972.608,
+  "tasks": [
+   {
+    "task_id": "t00",
+    "state": "success",
+    "queue_to_start": 986.542,
+    "task_runtime": 2323.604,
+    "task_total": 3365.0220000000004
+   },
+   {
+    "task_id": "t01",
+    "state": "success",
+    "queue_to_start": 1125.4820000000002,
+    "task_runtime": 2207.296,
+    "task_total": 3387.654
+   },
+   {
+    "task_id": "t02",
+    "state": "success",
+    "queue_to_start": 1880.5320000000002,
+    "task_runtime": 1927.239,
+    "task_total": 3862.647
+   },
+   {
+    "task_id": "t03",
+    "state": "success",
+    "queue_to_start": 2047.4420000000002,
+    "task_runtime": 1929.1499999999999,
+    "task_total": 4031.4680000000003
+   },
+   {
+    "task_id": "t04",
+    "state": "success",
+    "queue_to_start": 1015.7210000000001,
+    "task_runtime": 2261.3810000000003,
+    "task_total": 3331.978
+   },
+   {
+    "task_id": "t05",
+    "state": "success",
+    "queue_to_start": 1200.8490000000002,
+    "task_runtime": 1492.049,
+    "task_total": 2747.7740000000003
+   },
+   {
+    "task_id": "t06",
+    "state": "success",
+    "queue_to_start": 1281.012,
+    "task_runtime": 2165.413,
+    "task_total": 3501.3010000000004
+   },
+   {
+    "task_id": "t07",
+    "state": "success",
+    "queue_to_start": 1395.808,
+    "task_runtime": 2522.025,
+    "task_total": 3972.709
+   }
+  ]
+ },
+ {
+  "dag_id": "bench_wasm_edge_run",
+  "run_id": "bench_20261119T071609_3",
+  "state": "success",
+  "makespan": 3524.1639999999998,
+  "tasks": [
+   {
+    "task_id": "t00",
+    "state": "success",
+    "queue_to_start": 723.8679999999999,
+    "task_runtime": 2358.8399999999997,
+    "task_total": 3117.0480000000002
+   },
+   {
+    "task_id": "t01",
+    "state": "success",
+    "queue_to_start": 781.471,
+    "task_runtime": 888.933,
+    "task_total": 1704.7440000000001
+   },
+   {
+    "task_id": "t02",
+    "state": "success",
+    "queue_to_start": 972.4699999999999,
+    "task_runtime": 1442.0910000000001,
+    "task_total": 2448.9010000000003
+   },
+   {
+    "task_id": "t03",
+    "state": "success",
+    "queue_to_start": 894.711,
+    "task_runtime": 1541.3619999999999,
+    "task_total": 2470.413
+   },
+   {
+    "task_id": "t04",
+    "state": "success",
+    "queue_to_start": 974.469,
+    "task_runtime": 1757.4840000000002,
+    "task_total": 2766.293
+   },
+   {
+    "task_id": "t05",
+    "state": "success",
+    "queue_to_start": 1148.674,
+    "task_runtime": 1926.784,
+    "task_total": 3109.7980000000002
+   },
+   {
+    "task_id": "t06",
+    "state": "success",
+    "queue_to_start": 1224.842,
+    "task_runtime": 1773.222,
+    "task_total": 3032.404
+   },
+   {
+    "task_id": "t07",
+    "state": "success",
+    "queue_to_start": 1438.099,
+    "task_runtime": 1936.802,
+    "task_total": 3409.241
+   }
+  ]
+ },
+ {
+  "dag_id": "bench_wasm_edge_run",
+  "run_id": "bench_20261119T071609_4",
+  "state": "success",
+  "makespan": 3957.392,
+  "tasks": [
+   {
+    "task_id": "t00",
+    "state": "success",
+    "queue_to_start": 826.5,
+    "task_runtime": 2101.102,
+    "task_total": 2963.5009999999997
+   },
+   {
+    "task_id": "t01",
+    "state": "success",
+    "queue_to_start": 885.1179999999999,
+    "task_runtime": 1267.488,
+    "task_total": 2188.505
+   },
+   {
+    "task_id": "t02",
+    "state": "success",
+    "queue_to_start": 1001.6510000000001,
+    "task_runtime": 1517.4650000000001,
+    "task_total": 2555.015
+   },
+   {
+    "task_id": "t03",
+    "state": "success",
+    "queue_to_start": 1107.355,
+    "task_runtime": 1775.505,
+    "task_total": 2918.759
+   },
+   {
+    "task_id": "t04",
+    "state": "success",
+    "queue_to_start": 1078.165,
+    "task_runtime": 1854.743,
+    "task_total": 2968.807
+   },
+   {
+    "task_id": "t05",
+    "state": "success",
+    "queue_to_start": 1244.944,
+    "task_runtime": 1390.884,
+    "task_total": 2671.7270000000003
+   },
+   {
+    "task_id": "t06",
+    "state": "success",
+    "queue_to_start": 1485.008,
+    "task_runtime": 1770.275,
+    "task_total": 3291.1820000000002
+   },
+   {
+    "task_id": "t07",
+    "state": "success",
+    "queue_to_start": 1673.9669999999999,
+    "task_runtime": 1503.063,
+    "task_total": 3212.929
+   }
+  ]
+ },
+ {
+  "dag_id": "bench_wasm_edge_run",
+  "run_id": "bench_20261119T071609_5",
+  "state": "success",
+  "makespan": 3534.585,
+  "tasks": [
+   {
+    "task_id": "t00",
+    "state": "success",
+    "queue_to_start": 314.664,
+    "task_runtime": 1991.606,
+    "task_total": 2347.956
+   },
+   {
+    "task_id": "t01",
+    "state": "success",
+    "queue_to_start": 399.72999999999996,
+    "task_runtime": 1935.687,
+    "task_total": 2377.103
+   },
+   {
+    "task_id": "t02",
+    "state": "success",
+    "queue_to_start": 365.623,
+    "task_runtime": 1970.344,
+    "task_total": 2377.653
+   },
+   {
+    "task_id": "t03",
+    "state": "success",
+    "queue_to_start": 489.99399999999997,
+    "task_runtime": 1508.907,
+    "task_total": 2040.587
+   },
+   {
+    "task_id": "t04",
+    "state": "success",
+    "queue_to_start": 767.754,
+    "task_runtime": 2202.555,
+    "task_total": 3011.9950000000003
+   },
+   {
+    "task_id": "t05",
+    "state": "success",
+    "queue_to_start": 929.052,
+    "task_runtime": 1617.925,
+    "task_total": 2588.663
+   },
+   {
+    "task_id": "t06",
+    "state": "success",
+    "queue_to_start": 1000.235,
+    "task_runtime": 1707.2130000000002,
+    "task_total": 2749.134
+   },
+   {
+    "task_id": "t07",
+    "state": "success",
+    "queue_to_start": 1026.3020000000001,
+    "task_runtime": 1661.645,
+    "task_total": 2729.6330000000003
+   }
+  ]
+ }
+]

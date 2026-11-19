@@ -29,8 +29,8 @@ We benchmark this against the KPO baseline and against **uv** as a lighter isola
 | `pipeline_py/pipeline.py` | The same transformation in Python Polars with PEP 723 inline deps, for the uv variants. All variants produce the identical result (480 rows, same revenue total). |
 | `runner/` | `airjet-runner`: Rust + wasmtime + axum. Loads modules once, AOT-compiles them (`.cwasm` baked into the image), keeps an `InstancePre`, and runs each `POST /v1/run` in a fresh `Store`. |
 | `airflow/airjet_airflow/` | `WasmOperator` (calls the runner), `UvOperator` (cached uv venv per dependency set) and `WasmExecutor` (runs WasmOperator tasks with no per-task process at all). Shipped via the Airflow `plugins/` folder. |
-| `airflow/dags/airjet_bench.py` | One DAG per variant × workload, each fanning out 8 identical tasks. |
-| `docker/`, `k8s/`, `scripts/` | Images, an Airflow 3 deployment running **LocalExecutor and KubernetesExecutor side by side** (Airflow 3 multi-executor, per-task `executor=`), build and deploy scripts. |
+| `airflow/airjet_airflow/bench.py`, `airflow/dags/airjet_bench*.py` | One DAG per variant × workload, each fanning out 8 identical tasks. The EdgeExecutor variants live in their own DAG file (see below). |
+| `docker/`, `k8s/`, `scripts/` | Images, an Airflow 3 deployment running **LocalExecutor, KubernetesExecutor, WasmExecutor and EdgeExecutor side by side** (Airflow 3 multi-executor, per-task `executor=`), build and deploy scripts. |
 | `bench/` | `micro.py`: launch cost per mechanism without Airflow. `airflow_bench.py`: end-to-end timings from the Airflow metadata DB. |
 
 ### The runner's sandbox
@@ -193,6 +193,56 @@ template context, and logs are written locally by the scheduler (fine for
 LocalExecutor-style log serving, but remote logging isn't wired in). It also relies on
 Airflow internals (`LocalExecutor` internals, the Execution API client, `DagVersion`),
 which change between Airflow versions.
+
+## EdgeExecutor: long-lived workers without a broker
+
+Celery's main draw on Kubernetes is long-lived workers (no pod per task). The Edge
+provider (`apache-airflow-providers-edge3` 5.1.1) gives the same without Redis/RabbitMQ:
+workers are a plain Deployment (`k8s/50-edge-worker.yaml`, one replica, concurrency 8)
+that poll the API server over HTTP for jobs. The `*_edge` variants run the same
+operators as their `*_local` counterparts, so only the executor differs.
+
+Two settings matter a lot:
+
+- **`[edge] job_poll_interval`** (seconds, integer, default 5): an idle worker only
+  asks for work this often, so the default adds 0-5 s before a task starts. Measured
+  with the default and with the minimum, 1 s.
+- **What the DAG file imports.** Each task process parses its DAG file. LocalExecutor
+  workers are forked from the scheduler and inherit its modules; Edge workers don't.
+  When the Edge DAGs lived in the same file as the KPO DAGs, every Edge task paid ~1.3 s
+  to import the kubernetes client (no-op task runtime 2.1 s → 0.75 s after moving them to
+  `airjet_bench_edge.py`). Raw data from before the split:
+  `results/airflow-edge-poll5-before-split/`.
+
+### Results (8 parallel tasks, median of 5 runs)
+
+| variant | makespan `run` | makespan `noop` | queued→started | task runtime `noop` |
+|---|---:|---:|---:|---:|
+| WasmOperator + Edge, 5 s poll (default) | 6.75 s | 6.08 s | 3.8-4.6 s | 0.75 s |
+| UvOperator + Edge, 5 s poll | 4.40 s | 6.63 s | 1.2-5.0 s | 0.77 s |
+| native binary + Edge, 5 s poll | 5.57 s | 2.81 s | 1.1-4.0 s | 0.74 s |
+| WasmOperator + Edge, 1 s poll | 3.69 s | 2.47 s | 0.9-1.0 s | 0.79 s |
+| UvOperator + Edge, 1 s poll | 4.50 s | 2.39 s | 0.9-1.2 s | 0.85 s |
+| native binary + Edge, 1 s poll | 3.01 s | 2.42 s | 0.9-1.0 s | 0.70 s |
+| *for reference:* WasmOperator + LocalExecutor | 1.96 s | 1.15 s | 0.04-0.17 s | 0.42 s |
+| *for reference:* WasmOperator + WasmExecutor | 1.26 s | 1.19 s | 0.02 s | 0.10 s |
+| *for reference:* KPO + KubernetesExecutor | 27.7 s | 27.6 s | 7.4 s | n/a |
+
+Raw data: `results/airflow-edge-poll5/`, `results/airflow-edge-poll1/`. The 5 s-poll
+medians vary a lot run to run, because what dominates is where in the poll cycle a run
+happens to land.
+
+- **Edge is ~10x faster than the pod-per-task baseline** and beats KPO on LocalExecutor
+  (6.4 s), with no broker and workers that scale as a Deployment.
+- **But it's ~2x slower than LocalExecutor even when tuned.** Its floor is the poll
+  interval (≥1 s, integer) plus a heavier per-task process (~0.75 s vs ~0.42 s), and logs
+  are pushed back to the API server over HTTP.
+- **With the default 5 s poll, start latency is 1-5 s and unpredictable.** Set
+  `job_poll_interval=1` for latency-sensitive DAGs.
+- **For wasm tasks, Edge only adds overhead.** The WasmOperator on Edge still runs a
+  Python task process on the worker just to make one HTTP call. The WasmExecutor (per
+  task 0.15 s, no polling) is the better fit there; Edge or Celery workers are for the
+  Python tasks that remain.
 
 ## Caveats
 

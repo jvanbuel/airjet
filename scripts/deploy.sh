@@ -17,8 +17,8 @@ kubectl apply -f k8s/00-namespace.yaml
 kubectl apply -f k8s/
 kubectl -n airjet rollout status deploy/postgres --timeout=180s
 kubectl -n airjet wait --for=condition=complete job/airflow-db-migrate --timeout=600s
-kubectl -n airjet rollout restart deploy/airflow-scheduler deploy/airflow-dag-processor deploy/airflow-api-server deploy/airjet-runner
-for d in airjet-runner airflow-api-server airflow-scheduler airflow-dag-processor; do
+kubectl -n airjet rollout restart deploy/airflow-scheduler deploy/airflow-dag-processor deploy/airflow-api-server deploy/airflow-edge-worker deploy/airjet-runner
+for d in airjet-runner airflow-api-server airflow-scheduler airflow-dag-processor airflow-edge-worker; do
   kubectl -n airjet rollout status deploy/$d --timeout=300s
 done
 kubectl -n airjet get pods
