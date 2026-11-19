@@ -1,0 +1,4 @@
+# polars >= 0.5x pulls tokio with `net`/`fs`/`rt-multi-thread`; tokio only allows
+# those on wasm targets behind tokio_unstable (WASI support is experimental).
+[target.wasm32-wasip1]
+rustflags = ["--cfg", "tokio_unstable"]

@@ -1,0 +1,76 @@
+apiVersion: batch/v1
+kind: Job
+metadata: {name: airflow-db-migrate, namespace: airjet}
+spec:
+  backoffLimit: 10
+  template:
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: migrate
+          image: airjet/airflow:dev
+          imagePullPolicy: IfNotPresent
+          args: ["db", "migrate"]
+          envFrom: [{configMapRef: {name: airflow-env}}]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: airflow-api-server, namespace: airjet}
+spec:
+  replicas: 1
+  selector: {matchLabels: {app: airflow-api-server}}
+  template:
+    metadata: {labels: {app: airflow-api-server}}
+    spec:
+      serviceAccountName: airflow
+      containers:
+        - name: api-server
+          image: airjet/airflow:dev
+          imagePullPolicy: IfNotPresent
+          args: ["api-server", "--workers", "2"]
+          envFrom: [{configMapRef: {name: airflow-env}}]
+          ports: [{containerPort: 8080}]
+          readinessProbe: {httpGet: {path: /api/v2/monitor/health, port: 8080}, periodSeconds: 5}
+---
+apiVersion: v1
+kind: Service
+metadata: {name: airflow-api-server, namespace: airjet}
+spec:
+  selector: {app: airflow-api-server}
+  ports: [{port: 8080}]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: airflow-scheduler, namespace: airjet}
+spec:
+  replicas: 1
+  selector: {matchLabels: {app: airflow-scheduler}}
+  template:
+    metadata: {labels: {app: airflow-scheduler}}
+    spec:
+      serviceAccountName: airflow
+      containers:
+        - name: scheduler
+          image: airjet/airflow:dev
+          imagePullPolicy: IfNotPresent
+          args: ["scheduler"]
+          envFrom: [{configMapRef: {name: airflow-env}}]
+          volumeMounts: [{name: pod-template, mountPath: /opt/airflow/pod-template}]
+      volumes: [{name: pod-template, configMap: {name: airflow-pod-template}}]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: airflow-dag-processor, namespace: airjet}
+spec:
+  replicas: 1
+  selector: {matchLabels: {app: airflow-dag-processor}}
+  template:
+    metadata: {labels: {app: airflow-dag-processor}}
+    spec:
+      serviceAccountName: airflow
+      containers:
+        - name: dag-processor
+          image: airjet/airflow:dev
+          imagePullPolicy: IfNotPresent
+          args: ["dag-processor"]
+          envFrom: [{configMapRef: {name: airflow-env}}]

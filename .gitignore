@@ -1,0 +1,6 @@
+target/
+dist/
+.cache/
+data/
+__pycache__/
+*.cwasm

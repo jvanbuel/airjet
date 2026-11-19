@@ -1,0 +1,19 @@
+[package]
+name = "airjet-pipeline"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+polars-core = { version = "0.55.2", default-features = false, features = ["dtype-date", "algorithm_group_by"] }
+polars-io = { version = "0.55.2", default-features = false, features = ["csv", "parquet"] }
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+strip = true
+
+# polars-core only supports wasm via emscripten; vendor/polars-core carries a
+# one-function patch so it also builds for wasm32-wasip1 (see vendor/README.md).
+[patch.crates-io]
+polars-core = { path = "vendor/polars-core" }

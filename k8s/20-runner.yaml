@@ -1,0 +1,36 @@
+# airjet-runner: long-lived wasm task runners. Scale replicas (or add an HPA on
+# CPU) instead of creating a pod per task.
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: airjet-runner, namespace: airjet}
+spec:
+  replicas: 1
+  selector: {matchLabels: {app: airjet-runner}}
+  template:
+    metadata: {labels: {app: airjet-runner}}
+    spec:
+      containers:
+        - name: runner
+          image: airjet/runner:dev
+          imagePullPolicy: IfNotPresent
+          env:
+            - {name: AIRJET_MAX_CONCURRENCY, value: "4"}
+            - {name: RUST_LOG, value: info}
+          ports: [{containerPort: 8080}]
+          readinessProbe: {httpGet: {path: /healthz, port: 8080}, periodSeconds: 2}
+          resources:
+            requests: {cpu: "1", memory: 512Mi}
+          securityContext:
+            runAsNonRoot: true
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: {drop: [ALL]}
+          volumeMounts: [{name: out, mountPath: /tmp/airjet-out}]
+      volumes: [{name: out, emptyDir: {}}]
+---
+apiVersion: v1
+kind: Service
+metadata: {name: airjet-runner, namespace: airjet}
+spec:
+  selector: {app: airjet-runner}
+  ports: [{port: 8080}]
