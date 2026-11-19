@@ -1,0 +1,128 @@
+{
+ "bench_kpo_k8sexec_run": {
+  "runs": 5,
+  "failed_runs": 0,
+  "makespan_ms_p50": 27661.0,
+  "queue_to_start_ms_p50": 7429.0,
+  "task_runtime_ms_p50": 17987.0,
+  "task_total_ms_p50": 25577.0,
+  "task_total_ms_max": 29414.0
+ },
+ "bench_kpo_local_run": {
+  "runs": 5,
+  "failed_runs": 0,
+  "makespan_ms_p50": 6944.0,
+  "queue_to_start_ms_p50": 69.0,
+  "task_runtime_ms_p50": 5886.0,
+  "task_total_ms_p50": 6009.0,
+  "task_total_ms_max": 6564.0
+ },
+ "bench_wasm_k8sexec_run": {
+  "runs": 5,
+  "failed_runs": 0,
+  "makespan_ms_p50": 23346.0,
+  "queue_to_start_ms_p50": 7310.0,
+  "task_runtime_ms_p50": 13344.0,
+  "task_total_ms_p50": 20491.0,
+  "task_total_ms_max": 23529.0
+ },
+ "bench_wasm_local_run": {
+  "runs": 5,
+  "failed_runs": 0,
+  "makespan_ms_p50": 1185.0,
+  "queue_to_start_ms_p50": 57.0,
+  "task_runtime_ms_p50": 778.0,
+  "task_total_ms_p50": 865.0,
+  "task_total_ms_max": 1107.0
+ },
+ "bench_uv_bash_local_run": {
+  "runs": 5,
+  "failed_runs": 0,
+  "makespan_ms_p50": 2403.0,
+  "queue_to_start_ms_p50": 83.0,
+  "task_runtime_ms_p50": 1326.0,
+  "task_total_ms_p50": 1447.0,
+  "task_total_ms_max": 1784.0
+ },
+ "bench_uv_op_local_run": {
+  "runs": 5,
+  "failed_runs": 0,
+  "makespan_ms_p50": 2290.0,
+  "queue_to_start_ms_p50": 50.0,
+  "task_runtime_ms_p50": 1180.0,
+  "task_total_ms_p50": 1275.0,
+  "task_total_ms_max": 1539.0
+ },
+ "bench_native_bash_local_run": {
+  "runs": 5,
+  "failed_runs": 0,
+  "makespan_ms_p50": 1215.0,
+  "queue_to_start_ms_p50": 50.0,
+  "task_runtime_ms_p50": 702.0,
+  "task_total_ms_p50": 789.0,
+  "task_total_ms_max": 963.0
+ },
+ "bench_kpo_k8sexec_noop": {
+  "runs": 5,
+  "failed_runs": 0,
+  "makespan_ms_p50": 27603.0,
+  "queue_to_start_ms_p50": 7164.0,
+  "task_runtime_ms_p50": 17171.0,
+  "task_total_ms_p50": 24146.0,
+  "task_total_ms_max": 28837.0
+ },
+ "bench_kpo_local_noop": {
+  "runs": 5,
+  "failed_runs": 0,
+  "makespan_ms_p50": 6422.0,
+  "queue_to_start_ms_p50": 51.0,
+  "task_runtime_ms_p50": 5199.0,
+  "task_total_ms_p50": 5289.0,
+  "task_total_ms_max": 6470.0
+ },
+ "bench_wasm_k8sexec_noop": {
+  "runs": 5,
+  "failed_runs": 0,
+  "makespan_ms_p50": 21035.0,
+  "queue_to_start_ms_p50": 7246.0,
+  "task_runtime_ms_p50": 10620.0,
+  "task_total_ms_p50": 17470.0,
+  "task_total_ms_max": 22290.0
+ },
+ "bench_wasm_local_noop": {
+  "runs": 5,
+  "failed_runs": 0,
+  "makespan_ms_p50": 1076.0,
+  "queue_to_start_ms_p50": 56.0,
+  "task_runtime_ms_p50": 437.0,
+  "task_total_ms_p50": 533.0,
+  "task_total_ms_max": 745.0
+ },
+ "bench_uv_bash_local_noop": {
+  "runs": 5,
+  "failed_runs": 0,
+  "makespan_ms_p50": 1193.0,
+  "queue_to_start_ms_p50": 54.0,
+  "task_runtime_ms_p50": 486.0,
+  "task_total_ms_p50": 573.0,
+  "task_total_ms_max": 1170.0
+ },
+ "bench_uv_op_local_noop": {
+  "runs": 5,
+  "failed_runs": 0,
+  "makespan_ms_p50": 1258.0,
+  "queue_to_start_ms_p50": 52.0,
+  "task_runtime_ms_p50": 502.0,
+  "task_total_ms_p50": 590.0,
+  "task_total_ms_max": 1146.0
+ },
+ "bench_native_bash_local_noop": {
+  "runs": 5,
+  "failed_runs": 0,
+  "makespan_ms_p50": 1151.0,
+  "queue_to_start_ms_p50": 57.0,
+  "task_runtime_ms_p50": 438.0,
+  "task_total_ms_p50": 524.0,
+  "task_total_ms_max": 699.0
+ }
+}

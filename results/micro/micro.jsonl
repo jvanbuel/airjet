@@ -1,0 +1,10 @@
+{"mechanism": "native_exec", "workload": "noop", "n": 10, "min": 2.2, "p50": 2.8, "p90": 3.2, "max": 3.2, "mean": 2.8}
+{"mechanism": "native_exec", "workload": "run", "n": 10, "min": 50.6, "p50": 61.7, "p90": 76.2, "max": 76.2, "mean": 61.5}
+{"mechanism": "uv_run_script", "workload": "noop", "n": 10, "min": 29.8, "p50": 35.0, "p90": 38.1, "max": 38.1, "mean": 34.4}
+{"mechanism": "uv_run_script", "workload": "run", "n": 10, "min": 259.7, "p50": 275.9, "p90": 329.4, "max": 329.4, "mean": 284.5}
+{"mechanism": "uv_operator_env", "workload": "noop", "n": 10, "min": 19.4, "p50": 23.1, "p90": 24.2, "max": 24.2, "mean": 22.5}
+{"mechanism": "uv_operator_env", "workload": "run", "n": 10, "min": 254.8, "p50": 266.0, "p90": 306.4, "max": 306.4, "mean": 270.4}
+{"mechanism": "wasm_runner_http", "workload": "noop", "n": 10, "min": 1.3, "p50": 1.5, "p90": 1.6, "max": 1.6, "mean": 1.4}
+{"mechanism": "wasm_runner_http", "workload": "run", "n": 10, "min": 145.1, "p50": 169.3, "p90": 214.7, "max": 214.7, "mean": 173.1}
+{"mechanism": "k8s_pod", "workload": "noop", "n": 10, "min": 2136.8, "p50": 2184.9, "p90": 2214.4, "max": 2214.4, "mean": 2180.3}
+{"mechanism": "k8s_pod", "workload": "run", "n": 10, "min": 2223.0, "p50": 2253.1, "p90": 2302.4, "max": 2302.4, "mean": 2256.0}
