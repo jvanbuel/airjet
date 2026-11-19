@@ -28,7 +28,7 @@ We benchmark this against the KPO baseline and against **uv** as a lighter isola
 | `pipeline/` | The task: a Rust **Polars** ETL step (read 200k orders CSV → filter → derive revenue/month → group-by aggregate → Parquet). One source, built natively (KPO image) and for `wasm32-wasip1` (runner). |
 | `pipeline_py/pipeline.py` | The same transformation in Python Polars with PEP 723 inline deps, for the uv variants. All variants produce the identical result (480 rows, same revenue total). |
 | `runner/` | `airjet-runner`: Rust + wasmtime + axum. Loads modules once, AOT-compiles them (`.cwasm` baked into the image), keeps an `InstancePre`, and runs each `POST /v1/run` in a fresh `Store`. |
-| `airflow/airjet_airflow/` | `WasmOperator` (calls the runner) and `UvOperator` (cached uv venv per dependency set). Shipped via the Airflow `plugins/` folder. |
+| `airflow/airjet_airflow/` | `WasmOperator` (calls the runner), `UvOperator` (cached uv venv per dependency set) and `WasmExecutor` (runs WasmOperator tasks with no per-task process at all). Shipped via the Airflow `plugins/` folder. |
 | `airflow/dags/airjet_bench.py` | One DAG per variant × workload, each fanning out 8 identical tasks. |
 | `docker/`, `k8s/`, `scripts/` | Images, an Airflow 3 deployment running **LocalExecutor and KubernetesExecutor side by side** (Airflow 3 multi-executor, per-task `executor=`), build and deploy scripts. |
 | `bench/` | `micro.py`: launch cost per mechanism without Airflow. `airflow_bench.py`: end-to-end timings from the Airflow metadata DB. |
@@ -133,7 +133,68 @@ LocalExecutor/Celery is the cheapest change. If you need tasks isolated from the
 and each other (multi-tenant, untrusted or third-party code, least-privilege data access),
 wasm on a shared runner gives you that for roughly the same cost as a plain subprocess.
 
-### Caveats
+## WasmExecutor: no task process either
+
+With airjet on the LocalExecutor there are no pods per task, but every task still gets
+a Python task process: fork, load the DAG file, render templates, talk to the Execution
+API, then make one HTTP call to the runner. That is ~0.4 s per task, for a wasm
+instantiation that takes ~0.2 ms.
+
+`airjet_airflow/executor.py` is a `LocalExecutor` subclass that short-circuits this for
+`WasmOperator` tasks. On a thread pool inside the scheduler it:
+
+1. reads the task definition from the **serialized DAG version** in the metadata DB
+   (no user DAG code is imported into the scheduler);
+2. marks the task running through the Execution API, the same call the task
+   supervisor makes;
+3. renders the templated fields (sandboxed Jinja, small context: `ds`, `ts`,
+   `logical_date`, `run_id`, `task_id`, `params`, ...) and POSTs them to airjet-runner,
+   sending heartbeats while it waits;
+4. writes the runner's stdout/stderr into the normal task log file and reports success,
+   `up_for_retry` or failed through the Execution API.
+
+Any other task routed to it falls back to regular LocalExecutor worker processes, so it
+can be the default executor. Enable it as an Airflow 3 multi-executor entry and route
+tasks with `executor="WasmExecutor"`:
+
+```
+AIRFLOW__CORE__EXECUTOR="LocalExecutor,KubernetesExecutor,WasmExecutor:airjet_airflow.executor.WasmExecutor"
+```
+
+`airflow/dags/airjet_wasmexec_demo.py` exercises the edge cases, all verified: a
+templated output path renders (`orders-2026-11-19-aggregate.parquet`), a task with a
+missing input fails, is retried once and ends `failed` with the guest's stderr in both
+attempt logs, and a `BashOperator` on the same executor runs in a normal task process.
+
+### Results (same benchmark, re-run in one session for a fair comparison)
+
+| variant | per-task scheduled→done `run` | per-task `noop` | task runtime `noop` | makespan `run` | makespan `noop` |
+|---|---:|---:|---:|---:|---:|
+| WasmOperator + LocalExecutor | 1.02 s | 0.50 s | 420 ms | 1.96 s | 1.15 s |
+| **WasmOperator + WasmExecutor** | **0.51 s** | **0.15 s** | **96 ms** | **1.26 s** | 1.19 s |
+| native binary + LocalExecutor (reference) | 0.77 s | 0.55 s | 454 ms | 1.39 s | 1.17 s |
+
+Raw data: `results/airflow-wasmexec/`.
+
+- **Per-task overhead drops ~3x** (0.50 → 0.15 s on `noop`). What remains is two
+  Execution API calls plus the runner round trip; the task process is gone. Sandboxed
+  wasm tasks now finish faster than an unsandboxed native binary under LocalExecutor.
+- **The makespan floor is now the scheduler itself.** For every variant, the DAG run is
+  marked done 0.6-1.0 s after its last task finishes, because that waits for the
+  scheduler's next loop. Once tasks are this cheap, scheduler tuning
+  (`scheduler_idle_sleep_time` and friends, not tried here) is the next lever, not the
+  executor.
+- **Concurrency gets cheap.** A running task is a thread blocked on HTTP, not a ~100 MB
+  Python process, so one scheduler can drive far more concurrent wasm tasks; the limit
+  becomes runner capacity, which scales by adding runner replicas.
+
+Prototype limits: no XCom push, no `on_*_callback`s, no outlets/assets, a reduced
+template context, and logs are written locally by the scheduler (fine for
+LocalExecutor-style log serving, but remote logging isn't wired in). It also relies on
+Airflow internals (`LocalExecutor` internals, the Execution API client, `DagVersion`),
+which change between Airflow versions.
+
+## Caveats
 
 - One small node, local images, one runner replica with `AIRJET_MAX_CONCURRENCY=4`.
   `WORKER_PODS_CREATION_BATCH_SIZE` was raised to 32 so the baseline isn't throttled

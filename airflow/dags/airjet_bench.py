@@ -12,6 +12,7 @@ kpo_k8sexec   (baseline) KubernetesExecutor  2          native Rust/Polars in a 
 kpo_local                LocalExecutor       1          native Rust/Polars in a container
 wasm_k8sexec             KubernetesExecutor  1          Rust/Polars wasm on airjet-runner
 wasm_local    (airjet)   LocalExecutor       0          Rust/Polars wasm on airjet-runner
+wasm_wasmexec            WasmExecutor        0          same, no per-task Python process either
 uv_bash_local            LocalExecutor       0          BashOperator: uv run --script (Python Polars)
 uv_op_local              LocalExecutor       0          UvOperator: cached uv venv (Python Polars)
 native_bash_local (ref)  LocalExecutor       0          BashOperator: native binary, no isolation
@@ -62,7 +63,8 @@ def make_task(variant: str, workload: str, i: int):
     if variant.startswith("wasm_"):
         return WasmOperator(
             task_id=tid,
-            executor="KubernetesExecutor" if variant == "wasm_k8sexec" else "LocalExecutor",
+            executor={"wasm_k8sexec": "KubernetesExecutor", "wasm_wasmexec": "WasmExecutor"}.get(
+                variant, "LocalExecutor"),
             module="airjet-pipeline",
             # inside the sandbox: /data is the runner's data dir, /out is per-run
             args=args_for(workload, "/data/orders.csv", "/out/agg.parquet"),
@@ -94,8 +96,8 @@ def make_task(variant: str, workload: str, i: int):
     raise ValueError(variant)
 
 
-VARIANTS = ["kpo_k8sexec", "kpo_local", "wasm_k8sexec", "wasm_local", "uv_bash_local", "uv_op_local",
-            "native_bash_local"]
+VARIANTS = ["kpo_k8sexec", "kpo_local", "wasm_k8sexec", "wasm_local", "wasm_wasmexec", "uv_bash_local",
+            "uv_op_local", "native_bash_local"]
 
 for variant in VARIANTS:
     for workload in ("run", "noop"):

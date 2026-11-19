@@ -21,7 +21,7 @@ kind: ConfigMap
 metadata: {name: airflow-env, namespace: airjet}
 data:
   # Airflow 3 multi-executor: tasks pick one via `executor=`; the first is the default.
-  AIRFLOW__CORE__EXECUTOR: "LocalExecutor,KubernetesExecutor"
+  AIRFLOW__CORE__EXECUTOR: "LocalExecutor,KubernetesExecutor,WasmExecutor:airjet_airflow.executor.WasmExecutor"
   AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: "postgresql+psycopg2://airflow:airflow@postgres:5432/airflow"
   AIRFLOW__CORE__LOAD_EXAMPLES: "False"
   AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: "False"

@@ -1,0 +1,56 @@
+{
+ "bench_wasm_local_run": {
+  "runs": 5,
+  "failed_runs": 0,
+  "makespan_ms_p50": 1963.0,
+  "queue_to_start_ms_p50": 165.0,
+  "task_runtime_ms_p50": 766.0,
+  "task_total_ms_p50": 1020.0,
+  "task_total_ms_max": 1314.0
+ },
+ "bench_wasm_wasmexec_run": {
+  "runs": 5,
+  "failed_runs": 0,
+  "makespan_ms_p50": 1262.0,
+  "queue_to_start_ms_p50": 16.0,
+  "task_runtime_ms_p50": 460.0,
+  "task_total_ms_p50": 509.0,
+  "task_total_ms_max": 705.0
+ },
+ "bench_native_bash_local_run": {
+  "runs": 5,
+  "failed_runs": 0,
+  "makespan_ms_p50": 1387.0,
+  "queue_to_start_ms_p50": 53.0,
+  "task_runtime_ms_p50": 659.0,
+  "task_total_ms_p50": 771.0,
+  "task_total_ms_max": 1207.0
+ },
+ "bench_wasm_local_noop": {
+  "runs": 5,
+  "failed_runs": 0,
+  "makespan_ms_p50": 1153.0,
+  "queue_to_start_ms_p50": 42.0,
+  "task_runtime_ms_p50": 420.0,
+  "task_total_ms_p50": 497.0,
+  "task_total_ms_max": 667.0
+ },
+ "bench_wasm_wasmexec_noop": {
+  "runs": 5,
+  "failed_runs": 0,
+  "makespan_ms_p50": 1193.0,
+  "queue_to_start_ms_p50": 18.0,
+  "task_runtime_ms_p50": 96.0,
+  "task_total_ms_p50": 150.0,
+  "task_total_ms_max": 208.0
+ },
+ "bench_native_bash_local_noop": {
+  "runs": 5,
+  "failed_runs": 0,
+  "makespan_ms_p50": 1166.0,
+  "queue_to_start_ms_p50": 48.0,
+  "task_runtime_ms_p50": 454.0,
+  "task_total_ms_p50": 547.0,
+  "task_total_ms_max": 650.0
+ }
+}

@@ -25,7 +25,9 @@ class WasmOperator(BaseOperator):
     :param runner_url: base URL of the runner; defaults to ``$AIRJET_RUNNER_URL``.
     """
 
-    template_fields: Sequence[str] = ("module", "args", "env")
+    # timeout/memory are templated mostly so they're kept in the serialized DAG,
+    # which is where the WasmExecutor reads task definitions from.
+    template_fields: Sequence[str] = ("module", "args", "env", "timeout_secs", "memory_limit_mb")
     ui_color = "#654ff0"
 
     def __init__(
@@ -55,11 +57,11 @@ class WasmOperator(BaseOperator):
             "args": [str(a) for a in self.args],
             "env": {k: str(v) for k, v in self.env.items()},
             "run_id": f"{ti.dag_id}.{ti.task_id}.{ti.map_index}.{ti.try_number}",
-            "timeout_secs": self.timeout_secs,
-            "memory_limit_mb": self.memory_limit_mb,
+            "timeout_secs": float(self.timeout_secs),
+            "memory_limit_mb": int(self.memory_limit_mb),
         }
         try:
-            resp = requests.post(f"{url}/v1/run", json=payload, timeout=self.timeout_secs + 30)
+            resp = requests.post(f"{url}/v1/run", json=payload, timeout=float(self.timeout_secs) + 30)
         except requests.RequestException as e:
             raise AirflowException(f"airjet-runner unreachable at {url}: {e}") from e
         if resp.status_code != 200:
