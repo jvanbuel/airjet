@@ -24,7 +24,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 NS = "airjet"
-VARIANTS = ["kpo_k8sexec", "kpo_local", "wasm_k8sexec", "wasm_local", "wasm_wasmexec", "wasm_edge",
+VARIANTS = ["kpo_k8sexec", "kpo_local", "wasm_k8sexec", "wasm_local", "wasm_wasmexec", "wasm_queue", "wasm_edge",
             "uv_bash_local", "uv_op_local", "uv_op_edge", "native_bash_local", "native_bash_edge"]
 
 

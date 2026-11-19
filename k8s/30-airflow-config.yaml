@@ -21,7 +21,7 @@ kind: ConfigMap
 metadata: {name: airflow-env, namespace: airjet}
 data:
   # Airflow 3 multi-executor: tasks pick one via `executor=`; the first is the default.
-  AIRFLOW__CORE__EXECUTOR: "LocalExecutor,KubernetesExecutor,WasmExecutor:airjet_airflow.executor.WasmExecutor,EdgeExecutor:airflow.providers.edge3.executors.EdgeExecutor"
+  AIRFLOW__CORE__EXECUTOR: "LocalExecutor,KubernetesExecutor,WasmExecutor:airjet_airflow.executor.WasmExecutor,WasmQueueExecutor:airjet_airflow.queue_executor.WasmQueueExecutor,EdgeExecutor:airflow.providers.edge3.executors.EdgeExecutor"
   # EdgeExecutor: long-lived workers (deploy/airflow-edge-worker) that poll the API server.
   AIRFLOW__EDGE__API_ENABLED: "True"
   AIRFLOW__EDGE__API_URL: "http://airflow-api-server:8080/edge_worker/v1/rpcapi"

@@ -1,0 +1,20 @@
+{
+ "bench_wasm_wasmexec_run": {
+  "runs": 3,
+  "failed_runs": 0,
+  "makespan_ms_p50": 5466.0,
+  "queue_to_start_ms_p50": 49.0,
+  "task_runtime_ms_p50": 1077.0,
+  "task_total_ms_p50": 2562.0,
+  "task_total_ms_max": 4893.0
+ },
+ "bench_wasm_queue_run": {
+  "runs": 3,
+  "failed_runs": 0,
+  "makespan_ms_p50": 5535.0,
+  "queue_to_start_ms_p50": 1289.0,
+  "task_runtime_ms_p50": 376.0,
+  "task_total_ms_p50": 2477.0,
+  "task_total_ms_max": 4785.0
+ }
+}

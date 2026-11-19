@@ -34,7 +34,9 @@ use axum::{
 };
 use serde::{Deserialize, Serialize};
 use tokio::sync::Semaphore;
-use wasmtime::{Config, Engine, InstancePre, Linker, Module, Store, StoreLimits, StoreLimitsBuilder};
+use wasmtime::{
+    Config, Engine, InstancePre, Linker, Module, Store, StoreLimits, StoreLimitsBuilder, UpdateDeadline,
+};
 use wasmtime_wasi::{
     FsPerms, I32Exit, WasiCtxBuilder,
     p1::{self, WasiP1Ctx},
@@ -46,12 +48,14 @@ const EPOCH_TICK: Duration = Duration::from_millis(50);
 const MAX_CAPTURE: usize = 16 << 20;
 static RUN_SEQ: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
 
-struct TaskState {
+mod queue;
+
+pub(crate) struct TaskState {
     wasi: WasiP1Ctx,
     limits: StoreLimits,
 }
 
-struct App {
+pub(crate) struct App {
     engine: Engine,
     modules: HashMap<String, InstancePre<TaskState>>,
     data_dir: PathBuf,
@@ -60,8 +64,8 @@ struct App {
     max_concurrency: usize,
 }
 
-#[derive(Deserialize)]
-struct RunRequest {
+#[derive(Deserialize, Serialize, Clone)]
+pub(crate) struct RunRequest {
     module: String,
     #[serde(default)]
     args: Vec<String>,
@@ -83,7 +87,7 @@ fn default_mem() -> usize {
 }
 
 #[derive(Serialize)]
-struct RunResponse {
+pub(crate) struct RunResponse {
     exit_code: i32,
     stdout: String,
     stderr: String,
@@ -143,7 +147,14 @@ fn sanitize(id: &str) -> String {
 }
 
 /// Run one task to completion on the current (blocking) thread.
-fn execute(app: &App, req: RunRequest, queue_ms: f64) -> Result<RunResponse> {
+///
+/// `cancel`, when set from another thread, stops the guest at the next epoch tick.
+pub(crate) fn execute(
+    app: &App,
+    req: RunRequest,
+    queue_ms: f64,
+    cancel: Option<Arc<std::sync::atomic::AtomicBool>>,
+) -> Result<RunResponse> {
     let t0 = Instant::now();
     let pre = app
         .modules
@@ -182,8 +193,24 @@ fn execute(app: &App, req: RunRequest, queue_ms: f64) -> Result<RunResponse> {
     };
     let mut store = Store::new(&app.engine, state);
     store.limiter(|s| &mut s.limits);
-    let ticks = (req.timeout_secs / EPOCH_TICK.as_secs_f64()).ceil().max(1.0) as u64;
-    store.set_epoch_deadline(ticks);
+    // Check timeout and cancellation on every epoch tick.
+    let deadline = Instant::now() + Duration::from_secs_f64(req.timeout_secs.max(0.0));
+    let timed_out = Arc::new(std::sync::atomic::AtomicBool::new(false));
+    {
+        let (cancel, timed_out) = (cancel.clone(), timed_out.clone());
+        store.epoch_deadline_callback(move |_| {
+            use std::sync::atomic::Ordering::Relaxed;
+            if cancel.as_ref().is_some_and(|c| c.load(Relaxed)) {
+                return Ok(UpdateDeadline::Interrupt);
+            }
+            if Instant::now() >= deadline {
+                timed_out.store(true, Relaxed);
+                return Ok(UpdateDeadline::Interrupt);
+            }
+            Ok(UpdateDeadline::Continue(1))
+        });
+    }
+    store.set_epoch_deadline(1);
 
     let instance = pre.instantiate(&mut store).map_err(|e| anyhow!("{e:?}"))?;
     let start = instance
@@ -201,9 +228,12 @@ fn execute(app: &App, req: RunRequest, queue_ms: f64) -> Result<RunResponse> {
             Some(I32Exit(code)) => (*code, None),
             None => {
                 let msg = match e.downcast_ref::<wasmtime::Trap>() {
-                    Some(wasmtime::Trap::Interrupt) => {
+                    Some(wasmtime::Trap::Interrupt)
+                        if timed_out.load(std::sync::atomic::Ordering::Relaxed) =>
+                    {
                         format!("timeout after {}s", req.timeout_secs)
                     }
+                    Some(wasmtime::Trap::Interrupt) => "cancelled".to_string(),
                     _ => format!("{e:?}"),
                 };
                 (-1, Some(msg))
@@ -240,7 +270,7 @@ async fn run(
     let app2 = app.clone();
     let res = tokio::task::spawn_blocking(move || {
         let _permit = permit;
-        execute(&app2, req, queue_ms)
+        execute(&app2, req, queue_ms, None)
     })
     .await
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
@@ -330,6 +360,18 @@ async fn main() -> Result<()> {
         permits: Arc::new(Semaphore::new(max_concurrency)),
         max_concurrency,
     });
+
+    // Optional pull-based worker mode: claim jobs from the airjet queue (Postgres).
+    if let Ok(dsn) = std::env::var("AIRJET_QUEUE_DSN") {
+        let cfg = queue::QueueConfig::from_env(dsn);
+        let app = app.clone();
+        tokio::spawn(async move {
+            if let Err(e) = queue::run_worker(app, cfg).await {
+                tracing::error!("queue worker stopped: {e:#}");
+                std::process::exit(1);
+            }
+        });
+    }
 
     let router = Router::new()
         .route("/healthz", get(|| async { "ok" }))

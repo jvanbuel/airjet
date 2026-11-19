@@ -16,6 +16,10 @@ spec:
           env:
             - {name: AIRJET_MAX_CONCURRENCY, value: "4"}
             - {name: RUST_LOG, value: info}
+            # Worker mode: also pull jobs from the airjet queue (WasmQueueExecutor).
+            - {name: AIRJET_QUEUE_DSN, value: "postgresql://airflow:airflow@postgres:5432/airflow"}
+            - {name: AIRJET_QUEUES, value: "default"}
+            - {name: AIRJET_HEARTBEAT_SECS, value: "10"}
           ports: [{containerPort: 8080}]
           readinessProbe: {httpGet: {path: /healthz, port: 8080}, periodSeconds: 2}
           resources:
@@ -34,3 +38,33 @@ metadata: {name: airjet-runner, namespace: airjet}
 spec:
   selector: {app: airjet-runner}
   ports: [{port: 8080}]
+---
+# A second runner pool that only serves the "highmem" queue: tasks with
+# queue="highmem" run here (routing, like Celery queues). Not behind the Service.
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: airjet-runner-highmem, namespace: airjet}
+spec:
+  replicas: 1
+  selector: {matchLabels: {app: airjet-runner-highmem}}
+  template:
+    metadata: {labels: {app: airjet-runner-highmem}}
+    spec:
+      containers:
+        - name: runner
+          image: airjet/runner:dev
+          imagePullPolicy: IfNotPresent
+          env:
+            - {name: AIRJET_MAX_CONCURRENCY, value: "2"}
+            - {name: AIRJET_QUEUE_DSN, value: "postgresql://airflow:airflow@postgres:5432/airflow"}
+            - {name: AIRJET_QUEUES, value: "highmem"}
+            - {name: AIRJET_HEARTBEAT_SECS, value: "10"}
+          resources:
+            requests: {cpu: 500m, memory: 2Gi}
+          securityContext:
+            runAsNonRoot: true
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: {drop: [ALL]}
+          volumeMounts: [{name: out, mountPath: /tmp/airjet-out}]
+      volumes: [{name: out, emptyDir: {}}]

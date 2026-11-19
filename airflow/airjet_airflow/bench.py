@@ -13,6 +13,7 @@ kpo_local                LocalExecutor       1          native Rust/Polars in a 
 wasm_k8sexec             KubernetesExecutor  1          Rust/Polars wasm on airjet-runner
 wasm_local    (airjet)   LocalExecutor       0          Rust/Polars wasm on airjet-runner
 wasm_wasmexec            WasmExecutor        0          same, no per-task Python process either
+wasm_queue               WasmQueueExecutor   0          same, pulled from a Postgres job queue by runners
 wasm_edge                EdgeExecutor        0          same, on long-lived Edge workers
 uv_bash_local            LocalExecutor       0          BashOperator: uv run --script (Python Polars)
 uv_op_local              LocalExecutor       0          UvOperator: cached uv venv (Python Polars)
@@ -46,6 +47,7 @@ def args_for(workload: str, data: str, out: str) -> list[str]:
 EXECUTOR_BY_SUFFIX = {
     "_k8sexec": "KubernetesExecutor",
     "_wasmexec": "WasmExecutor",
+    "_queue": "WasmQueueExecutor",
     "_edge": "EdgeExecutor",
     "_local": "LocalExecutor",
 }
@@ -114,7 +116,7 @@ def make_task(variant: str, workload: str, i: int):
     raise ValueError(variant)
 
 
-VARIANTS = ["kpo_k8sexec", "kpo_local", "wasm_k8sexec", "wasm_local", "wasm_wasmexec", "wasm_edge",
+VARIANTS = ["kpo_k8sexec", "kpo_local", "wasm_k8sexec", "wasm_local", "wasm_wasmexec", "wasm_queue", "wasm_edge",
             "uv_bash_local", "uv_op_local", "uv_op_edge", "native_bash_local", "native_bash_edge"]
 
 

@@ -27,8 +27,8 @@ We benchmark this against the KPO baseline and against **uv** as a lighter isola
 |---|---|
 | `pipeline/` | The task: a Rust **Polars** ETL step (read 200k orders CSV → filter → derive revenue/month → group-by aggregate → Parquet). One source, built natively (KPO image) and for `wasm32-wasip1` (runner). |
 | `pipeline_py/pipeline.py` | The same transformation in Python Polars with PEP 723 inline deps, for the uv variants. All variants produce the identical result (480 rows, same revenue total). |
-| `runner/` | `airjet-runner`: Rust + wasmtime + axum. Loads modules once, AOT-compiles them (`.cwasm` baked into the image), keeps an `InstancePre`, and runs each `POST /v1/run` in a fresh `Store`. |
-| `airflow/airjet_airflow/` | `WasmOperator` (calls the runner), `UvOperator` (cached uv venv per dependency set) and `WasmExecutor` (runs WasmOperator tasks with no per-task process at all). Shipped via the Airflow `plugins/` folder. |
+| `runner/` | `airjet-runner`: Rust + wasmtime + axum. Loads modules once, AOT-compiles them (`.cwasm` baked into the image), keeps an `InstancePre`, and runs each task in a fresh `Store`, either on `POST /v1/run` or pulled from the airjet queue (worker mode). |
+| `airflow/airjet_airflow/` | `WasmOperator` (calls the runner), `UvOperator` (cached uv venv per dependency set) and `WasmExecutor` (runs WasmOperator tasks with no per-task process at all) and `WasmQueueExecutor` (the same, through a durable Postgres job queue that runners pull from). Shipped via the Airflow `plugins/` folder. |
 | `airflow/airjet_airflow/bench.py`, `airflow/dags/airjet_bench*.py` | One DAG per variant × workload, each fanning out 8 identical tasks. The EdgeExecutor variants live in their own DAG file (see below). |
 | `docker/`, `k8s/`, `scripts/` | Images, an Airflow 3 deployment running **LocalExecutor, KubernetesExecutor, WasmExecutor and EdgeExecutor side by side** (Airflow 3 multi-executor, per-task `executor=`), build and deploy scripts. |
 | `bench/` | `micro.py`: launch cost per mechanism without Airflow. `airflow_bench.py`: end-to-end timings from the Airflow metadata DB. |
@@ -243,6 +243,94 @@ happens to land.
   Python task process on the worker just to make one HTTP call. The WasmExecutor (per
   task 0.15 s, no polling) is the better fit there; Edge or Celery workers are for the
   Python tasks that remain.
+
+## airjet queue: "Celery for wasm jobs"
+
+What Celery gives you that the WasmExecutor doesn't:
+
+| | WasmExecutor (push) | Celery / airjet queue (pull) |
+|---|---|---|
+| in-flight work | a scheduler thread holds an HTTP call per task; tied to that scheduler process | lives in a durable queue; workers own it; survives scheduler restarts |
+| load balancing | whatever the Service does (kept-alive connections stick to pods) | workers pull when they have a free slot |
+| backpressure / honest state | tasks show `running` while waiting for a runner slot | tasks stay `queued` until a worker has capacity |
+| routing | one runner pool | named queues → worker pools (`queue="highmem"`) |
+| autoscaling signal | none | queue depth (KEDA etc.) |
+| cancellation | not wired | stop a running task from the UI |
+
+The airjet queue adds all of that with **Postgres as the broker** (already there for
+Airflow, no Redis/RabbitMQ) and the **runner as the worker**:
+
+```
+scheduler (WasmQueueExecutor) ──INSERT + NOTIFY──► airjet_job ◄── claim: FOR UPDATE SKIP LOCKED ── airjet-runner ×N
+        ▲                                                                                            │
+        └── sync(): finished rows → task log, executor event         Execution API: run, heartbeat, ─┘
+                                                                     success / up_for_retry / failed
+```
+
+- **Producer** (`airflow/airjet_airflow/queue_executor.py`): renders the WasmOperator from
+  the serialized DAG, inserts one row per task, `NOTIFY`s, and returns; nothing is held
+  while the task runs. The task's `external_executor_id` is set to `airjet-job:<id>`.
+- **Worker** (`runner/src/queue.rs`, enabled with `AIRJET_QUEUE_DSN`): `LISTEN`s, so it
+  wakes immediately instead of polling; claims at most as many jobs as it has free
+  slots, from the queues it serves (`AIRJET_QUEUES`); then drives the task the way
+  Airflow's own task supervisor does, through the Execution API: enter running,
+  heartbeat, report the terminal state. Output and timings go back to the job row, where
+  the executor turns them into the normal task log.
+- **Cancellation:** a heartbeat answered with 404/409/410 (task cleared or marked failed)
+  makes the runner interrupt the guest at its next epoch tick.
+- **Scheduler restarts:** jobs keep running and reporting through the Execution API; the
+  new scheduler adopts tasks whose `external_executor_id` points at a job and collects
+  their results.
+- **Worker crash:** at most once per try. The job isn't redelivered; the task stops
+  heartbeating, Airflow's heartbeat timeout fails it, and a retry is a new try and a new
+  job, like any other executor.
+- The queue table is in the Airflow metadata DB for this POC; any Postgres both sides
+  can reach works. Schema: `airflow/airjet_airflow/queue_schema.sql`.
+
+### Verified behaviour
+
+All via `airflow/dags/airjet_queue_demo.py`:
+
+- **Routing:** `queue="highmem"` ran only on `deploy/airjet-runner-highmem`, the default
+  queue only on `deploy/airjet-runner`.
+- **Retries:** a failing task (missing input) became `up_for_retry` and then a second
+  job for try 2, which ended `failed`.
+- **Cancellation:** a busy-looping `spin` task marked failed through the REST API was
+  stopped 5 s later, at the runner's next heartbeat (`AIRJET_HEARTBEAT_SECS=10`).
+- **Scheduler restart:** with the scheduler pod deleted while a 90 s job ran (orphan
+  check temporarily set to 15 s to make it observable), the new scheduler logged
+  `Adopted ... (airjet-job:8)`, the job ran to completion on the runner, and the result
+  landed in the task log on try 1 with no reset.
+- **Claim latency:** 2-5 ms from INSERT to claim (LISTEN/NOTIFY, no poll interval).
+
+### Results
+
+8 parallel tasks, median of 5 runs, re-run side by side:
+
+| variant | per-task scheduled→done `run` | per-task `noop` | task runtime `noop` | makespan `run` | makespan `noop` |
+|---|---:|---:|---:|---:|---:|
+| WasmOperator + LocalExecutor | 1.18 s | 0.58 s | 474 ms | 2.06 s | 1.31 s |
+| WasmOperator + WasmExecutor (push) | 0.55 s | 0.15 s | 107 ms | 1.30 s | 1.22 s |
+| **WasmOperator + WasmQueueExecutor (pull)** | **0.48 s** | **0.14 s** | **42 ms** | 1.37 s | 1.20 s |
+
+64 tasks over **2 runner replicas** (4 slots each), 3 runs:
+
+| | makespan | queued→started | task runtime | jobs per replica |
+|---|---:|---:|---:|---:|
+| WasmExecutor (push via Service) | 5.47 s | 0.05 s | 1.08 s | 156 / 100 (61/39) |
+| WasmQueueExecutor (pull) | 5.54 s | 1.29 s | 0.38 s | 32 / 32 every run |
+
+Raw data: `results/airflow-queue/`, `results/airflow-queue-fanout64/`.
+
+- **Durability costs no latency.** Per task the queue matches or beats the push
+  executor, and makespans are equal, because both sit on the scheduler-loop floor.
+- **Pull balances perfectly; push doesn't.** With two replicas, keep-alive HTTP
+  connections pinned 61% of the push executor's work to one pod. The queue split it
+  exactly 32/32. Makespans match here only because both replicas share one 4-core node;
+  on separate nodes the push imbalance would show directly as wall time.
+- **Task state tells the truth.** Under the push executor, tasks waiting for a runner
+  slot look `running` (1.08 s "runtime" for ~0.25 s of work). With the queue they stay
+  `queued` until a worker has capacity, which is what you want to alert and autoscale on.
 
 ## Caveats
 

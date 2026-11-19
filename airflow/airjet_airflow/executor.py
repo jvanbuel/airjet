@@ -124,26 +124,7 @@ class WasmExecutor(LocalExecutor):
             super()._process_workloads(fallback)
 
     def _wasm_spec(self, w: ExecuteTask) -> dict | None:
-        """Look the task up in the serialized DAG version it was scheduled with."""
-        cache_key = (str(w.ti.dag_version_id), w.ti.task_id)
-        if cache_key in self._tasks:
-            self._tasks.move_to_end(cache_key)
-            return self._tasks[cache_key]
-        from airflow.models.dag_version import DagVersion
-        from airflow.utils.session import create_session
-
-        spec = None
-        with create_session() as session:
-            dv = session.get(DagVersion, w.ti.dag_version_id)
-            if dv is not None and dv.serialized_dag is not None:
-                task = dv.serialized_dag.dag.get_task(w.ti.task_id)
-                if task.task_type in WASM_TASK_TYPES:
-                    spec = {f: getattr(task, f, None) for f in task.template_fields}
-                    spec["retries"] = task.retries
-        self._tasks[cache_key] = spec
-        if len(self._tasks) > 4096:
-            self._tasks.popitem(last=False)
-        return spec
+        return wasm_spec(w, self._tasks)
 
     # -- execution (worker threads) ----------------------------------------------
     def _run_safely(self, w: ExecuteTask, spec: dict) -> None:
@@ -191,17 +172,8 @@ class WasmExecutor(LocalExecutor):
             client.close()
 
     def _call_runner(self, w: ExecuteTask, spec: dict, run_ctx, log) -> tuple[bool, str]:
-        ctx = _template_context(w, run_ctx)
-        render = _renderer(ctx)
-        timeout = float(render(spec.get("timeout_secs") or 3600))
-        payload = {
-            "module": render(spec["module"]),
-            "args": [str(render(a)) for a in (spec.get("args") or [])],
-            "env": {k: str(render(v)) for k, v in (spec.get("env") or {}).items()},
-            "run_id": f"{w.ti.dag_id}.{w.ti.task_id}.{w.ti.map_index}.{w.ti.try_number}",
-            "timeout_secs": timeout,
-            "memory_limit_mb": int(render(spec.get("memory_limit_mb") or 2048)),
-        }
+        payload = render_run_request(w, spec, run_ctx.dag_run)
+        timeout = payload["timeout_secs"]
         log("Calling airjet-runner", module=payload["module"], args=payload["args"])
         t0 = time.perf_counter()
         try:
@@ -230,8 +202,48 @@ class WasmExecutor(LocalExecutor):
                 pass
 
 
-def _template_context(w: ExecuteTask, run_ctx) -> dict[str, Any]:
-    dr = run_ctx.dag_run
+def wasm_spec(w: ExecuteTask, cache: OrderedDict) -> dict | None:
+    """Look a task up in the serialized DAG version it was scheduled with.
+
+    Returns its templated fields if it is a WasmOperator, else None. Cached per
+    (dag_version_id, task_id): a DAG version is immutable.
+    """
+    cache_key = (str(w.ti.dag_version_id), w.ti.task_id)
+    if cache_key in cache:
+        cache.move_to_end(cache_key)
+        return cache[cache_key]
+    from airflow.models.dag_version import DagVersion
+    from airflow.utils.session import create_session
+
+    spec = None
+    with create_session() as session:
+        dv = session.get(DagVersion, w.ti.dag_version_id)
+        if dv is not None and dv.serialized_dag is not None:
+            task = dv.serialized_dag.dag.get_task(w.ti.task_id)
+            if task.task_type in WASM_TASK_TYPES:
+                spec = {f: getattr(task, f, None) for f in task.template_fields}
+                spec["retries"] = task.retries
+    cache[cache_key] = spec
+    if len(cache) > 4096:
+        cache.popitem(last=False)
+    return spec
+
+
+def render_run_request(w: ExecuteTask, spec: dict, dag_run) -> dict[str, Any]:
+    """Render a WasmOperator spec into an airjet-runner /v1/run request body."""
+    render = _renderer(_template_context(w, dag_run))
+    return {
+        "module": render(spec["module"]),
+        "args": [str(render(a)) for a in (spec.get("args") or [])],
+        "env": {k: str(render(v)) for k, v in (spec.get("env") or {}).items()},
+        "run_id": f"{w.ti.dag_id}.{w.ti.task_id}.{w.ti.map_index}.{w.ti.try_number}",
+        "timeout_secs": float(render(spec.get("timeout_secs") or 3600)),
+        "memory_limit_mb": int(render(spec.get("memory_limit_mb") or 2048)),
+    }
+
+
+def _template_context(w: ExecuteTask, dr) -> dict[str, Any]:
+    """Template context from a dag run (Execution API DagRun or ORM DagRun)."""
     logical = dr.logical_date
     return {
         "dag_id": w.ti.dag_id,

@@ -1,0 +1,56 @@
+{
+ "bench_wasm_local_run": {
+  "runs": 5,
+  "failed_runs": 0,
+  "makespan_ms_p50": 2063.0,
+  "queue_to_start_ms_p50": 212.0,
+  "task_runtime_ms_p50": 808.0,
+  "task_total_ms_p50": 1183.0,
+  "task_total_ms_max": 1644.0
+ },
+ "bench_wasm_wasmexec_run": {
+  "runs": 5,
+  "failed_runs": 0,
+  "makespan_ms_p50": 1297.0,
+  "queue_to_start_ms_p50": 18.0,
+  "task_runtime_ms_p50": 490.0,
+  "task_total_ms_p50": 554.0,
+  "task_total_ms_max": 848.0
+ },
+ "bench_wasm_queue_run": {
+  "runs": 5,
+  "failed_runs": 0,
+  "makespan_ms_p50": 1370.0,
+  "queue_to_start_ms_p50": 151.0,
+  "task_runtime_ms_p50": 269.0,
+  "task_total_ms_p50": 481.0,
+  "task_total_ms_max": 948.0
+ },
+ "bench_wasm_local_noop": {
+  "runs": 5,
+  "failed_runs": 0,
+  "makespan_ms_p50": 1308.0,
+  "queue_to_start_ms_p50": 68.0,
+  "task_runtime_ms_p50": 474.0,
+  "task_total_ms_p50": 584.0,
+  "task_total_ms_max": 838.0
+ },
+ "bench_wasm_wasmexec_noop": {
+  "runs": 5,
+  "failed_runs": 0,
+  "makespan_ms_p50": 1217.0,
+  "queue_to_start_ms_p50": 16.0,
+  "task_runtime_ms_p50": 107.0,
+  "task_total_ms_p50": 154.0,
+  "task_total_ms_max": 218.0
+ },
+ "bench_wasm_queue_noop": {
+  "runs": 5,
+  "failed_runs": 0,
+  "makespan_ms_p50": 1202.0,
+  "queue_to_start_ms_p50": 46.0,
+  "task_runtime_ms_p50": 42.0,
+  "task_total_ms_p50": 140.0,
+  "task_total_ms_max": 241.0
+ }
+}
